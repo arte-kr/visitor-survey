@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARTE MUSEUM · 방문객 설문</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<style>
+  :root{
+    --success:#00B050; --warning:#F59E0B; --danger:#FF0000;
+    --info:#185FA5; --accent2:#534AB7;
+    --bg:#FFFFFF; --panel:#F7F8FA; --panel-2:#EFF1F4; --line:#E3E6EB;
+    --text:#1A1D23; --muted:#6B7280; --muted-2:#9CA3AF; --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{ background:var(--bg); color:var(--text);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",-apple-system,BlinkMacSystemFont,sans-serif;
+    min-height:100vh; }
+  .wrap{ max-width:760px; margin:0 auto; padding:44px 20px 100px; }
+  .eyebrow{ font-size:11.5px; letter-spacing:0.16em; color:var(--info); font-weight:800; text-transform:uppercase; margin-bottom:10px; }
+  h1{ font-size:clamp(22px,4.4vw,32px); line-height:1.32; margin:0 0 8px; font-weight:800; letter-spacing:-0.01em; }
+  .sub{ color:var(--muted); font-size:14px; line-height:1.6; margin-bottom:28px; }
+  .logo-img{ max-height:56px; max-width:200px; margin-bottom:18px; border-radius:8px; }
+  .card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin-bottom:14px; box-shadow:0 1px 2px rgba(16,24,40,0.04); }
+  .q-label{ font-size:15px; font-weight:700; margin-bottom:4px; }
+  .q-sub{ font-size:12.5px; color:var(--muted); margin:-2px 0 12px; }
+  .q-hint{ font-size:12px; color:var(--muted); margin-bottom:14px; }
+  .options{ display:flex; flex-wrap:wrap; gap:8px; }
+  .opt{ border:1px solid var(--line); background:var(--panel); color:var(--text); padding:9px 15px; border-radius:999px; font-size:13.5px; cursor:pointer; transition:all .15s ease; user-select:none; }
+  .opt:hover{ border-color:var(--info); }
+  .opt.selected{ background:var(--info); border-color:var(--info); color:#fff; font-weight:700; }
+  textarea, input[type=text], input[type=password], input[type=date], select{
+    width:100%; background:#fff; border:1px solid var(--line); border-radius:10px; color:var(--text);
+    font-family:inherit; font-size:14px; padding:10px 12px; }
+  textarea{ min-height:88px; resize:vertical; }
+  textarea:focus, .opt:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible{ outline:2px solid var(--info); outline-offset:2px; }
+  .btn{ padding:13px; border:none; border-radius:11px; font-size:15px; font-weight:800; background:var(--info); color:#fff; cursor:pointer; }
+  .btn:hover{ opacity:0.88; }
+  .btn:disabled{ opacity:0.4; cursor:not-allowed; }
+  .btn-block{ width:100%; }
+  .btn-ghost{ background:#fff; border:1px solid var(--line); color:var(--text); padding:8px 13px; border-radius:8px; font-size:13px; cursor:pointer; }
+  .btn-ghost:hover{ border-color:var(--info); color:var(--info); }
+  .btn-danger{ border-color:rgba(255,0,0,0.3); color:var(--danger); }
+  .btn-danger.solid{ background:var(--danger); color:#fff; border-color:var(--danger); }
+  .btn-sm{ padding:7px 12px; font-size:12.5px; }
+  .req{ color:var(--danger); }
+  .error-text{ color:var(--danger); font-size:13px; margin-top:8px; display:none; }
+  .warn-box{ background:#FFF7E6; border:1px solid rgba(245,158,11,0.4); color:#92650A; font-size:12.5px; padding:10px 12px; border-radius:8px; margin-top:8px; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .row > *{ flex:1; }
+  .thanks, .closed{ text-align:center; padding:80px 20px; }
+  .thanks .big{ font-size:44px; margin-bottom:14px; color:var(--success); }
+  .closed .big{ font-size:44px; margin-bottom:14px; color:var(--muted-2); }
+  .admin-topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+  .live-badge{ display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--success); font-weight:700; background:rgba(0,176,80,0.08); border:1px solid rgba(0,176,80,0.3); padding:6px 12px; border-radius:999px; }
+  .status-badge{ font-size:11px; padding:3px 9px; border-radius:999px; font-weight:700; }
+  .status-active{ background:rgba(0,176,80,0.1); color:var(--success); }
+  .status-closed{ background:var(--panel-2); color:var(--muted-2); }
+  .stat-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(126px,1fr)); gap:12px; margin-bottom:18px; }
+  .stat{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:15px; }
+  .stat .num{ font-size:24px; font-weight:800; color:var(--info); }
+  .stat .lbl{ font-size:11.5px; color:var(--muted); margin-top:3px; }
+  .bar-row{ margin-bottom:10px; }
+  .bar-top{ display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; }
+  .bar-bg{ background:var(--panel-2); border-radius:8px; height:9px; overflow:hidden; }
+  .bar-fill{ height:100%; background:var(--info); border-radius:8px; transition:width .4s ease; }
+  .text-answer{ border-bottom:1px solid var(--line); padding:10px 0; font-size:13.5px; }
+  .text-answer:last-child{ border-bottom:none; }
+  .text-answer .ts{ color:var(--muted-2); font-size:11px; margin-top:3px; }
+  .login-card{ max-width:360px; margin:90px auto 0; text-align:center; }
+  details.section{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; overflow:hidden; }
+  details.section > summary{ padding:15px 18px; cursor:pointer; font-weight:700; font-size:14px; list-style:none; display:flex; justify-content:space-between; align-items:center; }
+  details.section > summary::-webkit-details-marker{ display:none; }
+  details.section > summary::after{ content:"▾"; color:var(--muted-2); }
+  details.section[open] > summary::after{ content:"▴"; }
+  .section-body{ padding:0 18px 18px; }
+  .qedit-card{ border:1px solid var(--line); background:var(--panel); border-radius:11px; padding:13px; margin-bottom:11px; }
+  .qedit-top{ display:flex; gap:8px; margin-bottom:8px; }
+  .qedit-top select{ max-width:130px; }
+  .qedit-remove{ background:none; border:none; color:var(--danger); cursor:pointer; font-size:13px; padding:0 6px; }
+  label.small{ font-size:11.5px; color:var(--muted); display:block; margin:8px 0 4px; }
+  .qr-wrap{ display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start; }
+  .qr-wrap canvas{ border-radius:10px; border:1px solid var(--line); }
+  .link-box{ display:flex; gap:8px; }
+  .link-box input{ flex:1; }
+  small.foot{ display:block; color:var(--muted-2); font-size:11px; margin-top:32px; text-align:center; }
+  .admin-tiny-link{ display:block; margin:14px auto 0; background:none; border:none; color:var(--muted-2); font-size:11px; text-decoration:underline; cursor:pointer; }
+  .logo-drop{ border:1px dashed var(--line); border-radius:10px; padding:12px; text-align:center; font-size:12.5px; color:var(--muted); cursor:pointer; background:var(--panel); }
+  .logo-preview{ max-height:44px; margin-top:8px; border-radius:6px; }
+  .qedit-preview-wrap{ margin-top:12px; border-top:1px dashed var(--line); padding-top:12px; }
+  .qedit-preview-label{ font-size:10.5px; color:var(--muted-2); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; font-weight:700; }
+  .preview-card{ pointer-events:none; }
+  .preview-card .opt{ cursor:default; }
+  .modal-overlay{ position:fixed; inset:0; background:rgba(20,22,26,0.45); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px; }
+  .modal-box{ background:#fff; border-radius:16px; padding:24px; max-width:380px; width:100%; box-shadow:0 12px 40px rgba(16,24,40,0.18); }
+  .modal-title{ font-size:16px; font-weight:800; margin-bottom:8px; }
+  .modal-msg{ font-size:13.5px; color:var(--muted); margin-bottom:14px; line-height:1.5; }
+  .modal-actions{ display:flex; gap:8px; margin-top:16px; }
+  .modal-actions .btn, .modal-actions .btn-ghost{ flex:1; }
+  .prize-row{ margin-bottom:8px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="modalRoot"></div>
+
+<script>
+/* ===================== 설정 ===================== */
+const SUPABASE_URL = "https://hawsdacjlxfqofxqrsls.supabase.co";
+const SUPABASE_KEY = "sb_publishable_1GuWN5-YTyBwoDOGgLP62g_Dkp8ZwnR";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const DEFAULT_QUESTIONS = () => ([
+  { id:"q_purpose", type:"single", label:"오늘 방문 목적은 무엇인가요?", required:true,
+    options:["전시 관람","기념품 구매","체험 프로그램","단체/학교 방문","기타"] },
+  { id:"q_satisfaction", type:"single", label:"전체적인 만족도를 평가해 주세요.", required:true,
+    options:["매우 만족","만족","보통","불만족","매우 불만족"] },
+  { id:"q_good", type:"multi", label:"어떤 점이 좋았나요? (복수 선택 가능)", required:false,
+    options:["전시 콘텐츠","공간/시설","직원 응대","편의시설","접근성","가격"] },
+  { id:"q_revisit", type:"single", label:"재방문 의향이 있으신가요?", required:true,
+    options:["매우 그렇다","그렇다","보통","아니다","전혀 아니다"] },
+  { id:"q_opinion", type:"text", label:"개선이 필요한 점이나 자유롭게 남기고 싶은 의견을 적어주세요.", required:false }
+]);
+
+let state = { view:"loading", survey:null, answers:{}, session:null,
+  branches:[], adminSurveys:[], adminSel:null, adminCfg:null, pollTimer:null, _lastData:[] };
+
+function uid(){ return Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8); }
+function qid(){ return "q_"+Math.random().toString(36).slice(2,8); }
+const app = document.getElementById("app");
+const modalRoot = document.getElementById("modalRoot");
+function escapeHtml(s){ return String(s??"").replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function hasAnswer(v){ if(v===undefined||v===null) return false; if(Array.isArray(v)) return v.length>0; return String(v).trim().length>0; }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function isClosed(cfg){ if(!cfg) return true; if(cfg.status==="closed") return true; if(cfg.end_date && todayStr() > cfg.end_date) return true; return false; }
+function questionCardHTML(q){
+  const label = q.label && q.label.trim() ? escapeHtml(q.label) : "(문항 내용을 입력하세요)";
+  let inner = `<div class="q-label">${label} ${q.required?'<span class="req">*</span>':''}</div>`;
+  if(q.sub && q.sub.trim()) inner += `<div class="q-sub">${escapeHtml(q.sub)}</div>`;
+  if(q.type==="text"){ inner += `<textarea placeholder="자유롭게 입력해 주세요" disabled></textarea>`; }
+  else {
+    inner += `<div class="q-hint">${q.type==='multi'?'중복 선택 가능':'하나만 선택'}</div>`;
+    inner += `<div class="options">` + (q.options||[]).map(o=>`<div class="opt">${escapeHtml(o)}</div>`).join("") + `</div>`;
+  }
+  return inner;
+}
+
+/* ===================== 모달 ===================== */
+function closeModal(){ modalRoot.innerHTML = ""; }
+function showPrompt(title, msg, defVal){
+  return new Promise(resolve=>{
+    modalRoot.innerHTML = `<div class="modal-overlay"><div class="modal-box">
+      <div class="modal-title">${escapeHtml(title)}</div>
+      ${msg?`<div class="modal-msg">${escapeHtml(msg)}</div>`:""}
+      <input type="text" id="modalInput" value="${escapeHtml(defVal||"")}">
+      <div class="modal-actions"><button class="btn-ghost" id="modalCancel">취소</button><button class="btn" id="modalOk">확인</button></div>
+    </div></div>`;
+    const input = document.getElementById("modalInput"); input.focus(); input.select();
+    document.getElementById("modalOk").addEventListener("click", ()=>{ const v=input.value.trim(); closeModal(); resolve(v||null); });
+    document.getElementById("modalCancel").addEventListener("click", ()=>{ closeModal(); resolve(null); });
+    input.addEventListener("keydown", e=>{ if(e.key==="Enter"){ const v=input.value.trim(); closeModal(); resolve(v||null); } });
+  });
+}
+function showConfirm(title, msg, danger){
+  return new Promise(resolve=>{
+    modalRoot.innerHTML = `<div class="modal-overlay"><div class="modal-box">
+      <div class="modal-title">${escapeHtml(title)}</div><div class="modal-msg">${escapeHtml(msg)}</div>
+      <div class="modal-actions"><button class="btn-ghost" id="modalCancel">취소</button>
+      <button class="btn ${danger?'btn-danger solid':''}" id="modalOk">확인</button></div>
+    </div></div>`;
+    document.getElementById("modalOk").addEventListener("click", ()=>{ closeModal(); resolve(true); });
+    document.getElementById("modalCancel").addEventListener("click", ()=>{ closeModal(); resolve(false); });
+  });
+}
+function showAlert(title, msg){
+  return new Promise(resolve=>{
+    modalRoot.innerHTML = `<div class="modal-overlay"><div class="modal-box">
+      <div class="modal-title">${escapeHtml(title)}</div>
+      ${msg?`<div class="modal-msg">${escapeHtml(msg)}</div>`:""}
+      <div class="modal-actions"><button class="btn" id="modalOk" style="flex:1">확인</button></div>
+    </div></div>`;
+    document.getElementById("modalOk").addEventListener("click", ()=>{ closeModal(); resolve(true); });
+  });
+}
+
+/* ===================== 세션 ===================== */
+function saveSession(){ sessionStorage.setItem("arte_admin_session", JSON.stringify(state.session)); }
+function loadSession(){ try{ return JSON.parse(sessionStorage.getItem("arte_admin_session")); }catch(e){ return null; } }
+function clearSession(){ sessionStorage.removeItem("arte_admin_session"); state.session=null; }
+
+/* ===================== 초기화/라우팅 ===================== */
+async function init(){
+  const params = new URLSearchParams(location.search);
+  const sid = params.get("s");
+  if(sid){
+    const { data, error } = await sb.from("survey_public").select("*").eq("id", sid).maybeSingle();
+    state.survey = data || null;
+    state.view = data ? "survey" : "notfound";
+  } else if(location.hash === "#admin"){
+    state.session = loadSession();
+    state.view = state.session ? "admin" : "admin-login";
+  } else {
+    state.view = "landing";
+  }
+  render();
+}
+window.addEventListener("hashchange", ()=>{
+  if(!new URLSearchParams(location.search).get("s")){
+    if(location.hash === "#admin"){
+      state.session = loadSession();
+      state.view = state.session ? "admin" : "admin-login";
+    } else { state.view = "landing"; }
+    render();
+  }
+});
+
+function render(){
+  if(state.pollTimer && state.view!=="admin"){ clearInterval(state.pollTimer); state.pollTimer=null; }
+  if(state.view==="landing") return renderLanding();
+  if(state.view==="notfound") return renderNotFound();
+  if(state.view==="survey") return renderSurvey();
+  if(state.view==="closed") return renderClosedPublic();
+  if(state.view==="thanks") return renderThanks();
+  if(state.view==="admin-login") return renderLogin();
+  if(state.view==="admin") return renderAdmin();
+}
+
+function goAdmin(){ location.hash="#admin"; state.session=loadSession(); state.view = state.session?"admin":"admin-login"; render(); }
+
+function renderLanding(){
+  app.innerHTML = `<div class="thanks"><div class="big" style="color:var(--info)">✦</div><h1>ARTE MUSEUM</h1>
+    <p class="sub">이 페이지는 설문 QR 코드 또는 링크를 통해 접속해 주세요.</p>
+    <button class="btn-ghost btn-sm" id="adminEnterBtn">관리자이신가요?</button></div>`;
+  document.getElementById("adminEnterBtn").addEventListener("click", goAdmin);
+}
+function renderNotFound(){
+  app.innerHTML = `<div class="thanks"><div class="big" style="color:var(--muted-2)">✦</div><h1>설문을 찾을 수 없습니다</h1>
+    <p class="sub">링크가 잘못되었거나 삭제된 설문일 수 있어요.</p></div>`;
+}
+function renderClosedPublic(){
+  app.innerHTML = `<div class="closed"><div class="big">✦</div><h1>설문이 종료되었습니다</h1>
+    <p class="sub">참여해 주셔서 감사합니다. 다음 방문 때 또 만나요.</p></div>`;
+}
+
+/* ===================== 고객 설문 화면 ===================== */
+function renderSurvey(){
+  const s = state.survey;
+  if(isClosed(s)){ state.view="closed"; return renderClosedPublic(); }
+  const logoHtml = s.logo ? `<img class="logo-img" src="${s.logo}" alt="로고">` : "";
+  const named = s.identity_mode === "named";
+  app.innerHTML = `
+    ${logoHtml}
+    <div class="eyebrow">ARTE MUSEUM VISITOR SURVEY</div>
+    <h1>${escapeHtml(s.title || "방문객 설문")}</h1>
+    <p class="sub">여러분의 소중한 의견은 더 나은 전시와 공간을 만드는 데 사용됩니다.${named?' 응답해주신 분들 중 추첨을 통해 사은품을 드립니다.':''}</p>
+    <div id="qlist"></div>
+    ${named ? `<div class="card">
+      <div class="q-label">사은품 추첨을 위한 정보 <span class="req">*</span></div>
+      <div class="q-hint">추첨 시에만 사용되며, 그 외 용도로 사용되지 않습니다.</div>
+      <label class="small">성함</label><input type="text" id="contactName" placeholder="홍길동">
+      <label class="small" style="margin-top:8px">연락처</label><input type="text" id="contactPhone" placeholder="010-0000-0000">
+    </div>` : ""}
+    <div class="error-text" id="err">모든 필수 항목(*)에 응답해 주세요.</div>
+    <button class="btn btn-block" id="submitBtn">제출하기</button>
+    <small class="foot">${named?'설문 응답 내용은 익명으로 집계됩니다. 성함·연락처는 추첨 용도로만 관리자가 열람합니다.':'응답 내용은 익명으로 집계되며 관리자만 열람할 수 있습니다.'}</small>
+  `;
+  const list = document.getElementById("qlist");
+  (s.questions||[]).forEach(q=>{
+    const card = document.createElement("div"); card.className="card";
+    let inner = `<div class="q-label">${escapeHtml(q.label)} ${q.required?'<span class="req">*</span>':''}</div>`;
+    if(q.sub && q.sub.trim()) inner += `<div class="q-sub">${escapeHtml(q.sub)}</div>`;
+    if(q.type==="text"){ inner += `<textarea data-qid="${q.id}" placeholder="자유롭게 입력해 주세요"></textarea>`; }
+    else {
+      inner += `<div class="q-hint">${q.type==="multi"?"중복 선택 가능":"하나만 선택"}</div>`;
+      inner += `<div class="options" data-qid="${q.id}" data-type="${q.type}">`;
+      inner += (q.options||[]).map(o=>`<div class="opt" data-val="${escapeHtml(o)}">${escapeHtml(o)}</div>`).join("");
+      inner += `</div>`;
+    }
+    card.innerHTML = inner; list.appendChild(card);
+  });
+  list.querySelectorAll(".opt").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const group=el.parentElement, type=group.dataset.type, gqid=group.dataset.qid;
+      if(type==="single"){
+        group.querySelectorAll(".opt").forEach(o=>o.classList.remove("selected"));
+        el.classList.add("selected"); state.answers[gqid]=el.dataset.val;
+      } else {
+        el.classList.toggle("selected");
+        state.answers[gqid]=[...group.querySelectorAll(".opt.selected")].map(o=>o.dataset.val);
+      }
+    });
+  });
+  list.querySelectorAll("textarea").forEach(t=> t.addEventListener("input", ()=>{ state.answers[t.dataset.qid]=t.value; }));
+  document.getElementById("submitBtn").addEventListener("click", submitSurvey);
+  const abtn = document.getElementById("adminEnterBtn2");
+}
+
+async function submitSurvey(){
+  const s = state.survey; const named = s.identity_mode === "named";
+  const missing = (s.questions||[]).filter(q=>q.required && !hasAnswer(state.answers[q.id]));
+  const errEl = document.getElementById("err");
+  let contactName=null, contactPhone=null;
+  if(named){
+    contactName = document.getElementById("contactName").value.trim();
+    contactPhone = document.getElementById("contactPhone").value.trim();
+    if(!contactName || !contactPhone || missing.length){ errEl.style.display="block"; return; }
+  } else if(missing.length){ errEl.style.display="block"; return; }
+  errEl.style.display="none";
+  const btn = document.getElementById("submitBtn");
+  btn.disabled=true; btn.textContent="제출 중...";
+  const { error } = await sb.from("responses").insert({
+    survey_id: s.id, answers: state.answers, contact_name: contactName, contact_phone: contactPhone
+  });
+  if(error){
+    btn.disabled=false; btn.textContent="제출하기";
+    errEl.textContent="제출 중 오류가 발생했습니다. 다시 시도해 주세요.";
+    errEl.style.display="block";
+  } else {
+    state.view="thanks"; state.answers={}; render();
+  }
+}
+function renderThanks(){
+  app.innerHTML = `<div class="thanks"><div class="big">✦</div><h1>소중한 의견<br/>감사합니다</h1>
+    <p class="sub">여러분의 응답이 아르떼뮤지엄을 더 나은 공간으로 만듭니다.</p></div>`;
+}
+
+/* ===================== 관리자 로그인 ===================== */
+async function renderLogin(){
+  app.innerHTML = `<div class="login-card">
+    <div class="eyebrow">ADMIN</div><h1 style="font-size:22px">지점 관리자 로그인</h1>
+    <p class="sub">지점을 선택하고 비밀번호를 입력해 주세요.</p>
+    <select id="branchSelect"><option value="">불러오는 중...</option></select>
+    <input type="password" id="pass" placeholder="비밀번호" style="margin-top:10px">
+    <button class="btn btn-block" id="loginBtn" style="margin-top:14px">입장하기</button>
+    <div class="error-text" id="loginErr">지점 또는 비밀번호가 올바르지 않습니다.</div>
+  </div>`;
+  const { data: branches } = await sb.from("branch_list").select("*").order("name");
+  state.branches = branches || [];
+  const sel = document.getElementById("branchSelect");
+  sel.innerHTML = state.branches.map(b=>`<option value="${b.id}">${escapeHtml(b.name)}</option>`).join("") || `<option value="">지점 정보를 불러오지 못했습니다</option>`;
+  const go = async ()=>{
+    const branchId = sel.value;
+    const pass = document.getElementById("pass").value;
+    if(!branchId || !pass) return;
+    const { data, error } = await sb.rpc("verify_branch_login", { p_code: state.branches.find(b=>b.id===branchId)?.code, p_password: pass });
+    if(error || !data || data.length===0){ document.getElementById("loginErr").style.display="block"; return; }
+    state.session = { branchId: data[0].branch_id, branchName: data[0].branch_name, password: pass };
+    saveSession();
+    state.view="admin"; render();
+  };
+  document.getElementById("loginBtn").addEventListener("click", go);
+  document.getElementById("pass").addEventListener("keydown", e=>{ if(e.key==="Enter") go(); });
+}
+
+/* ===================== 관리자 대시보드 ===================== */
+async function renderAdmin(){
+  if(!state.session){ state.view="admin-login"; return render(); }
+  app.innerHTML = `<div class="admin-topbar">
+      <div><div class="eyebrow">${escapeHtml(state.session.branchName)}</div><h1 style="font-size:20px">설문 관리</h1></div>
+      <div class="row" style="flex:none; gap:8px;">
+        <span class="live-badge">LIVE</span>
+        <button class="btn-ghost btn-sm" id="logoutBtn">로그아웃</button>
+      </div>
+    </div>
+    <details class="section"><summary>관리자 비밀번호 변경</summary>
+      <div class="section-body">
+        <input type="password" id="curPassInput" placeholder="현재 비밀번호">
+        <input type="password" id="newPassInput" placeholder="새 비밀번호 (4자 이상)" style="margin-top:8px">
+        <input type="password" id="newPassInput2" placeholder="새 비밀번호 확인" style="margin-top:8px">
+        <button class="btn btn-sm" id="changePassBtn" style="margin-top:10px">비밀번호 변경</button>
+      </div>
+    </details>
+    <div class="card">
+      <label class="small">설문 선택</label>
+      <div class="row">
+        <select id="surveySelect"><option value="">불러오는 중...</option></select>
+        <button class="btn-ghost btn-sm" id="newSurveyBtn">+ 새 설문</button>
+        <button class="btn-ghost btn-sm" id="dupSurveyBtn">복제</button>
+        <button class="btn-ghost btn-sm btn-danger" id="delSurveyBtn">삭제</button>
+      </div>
+    </div>
+    <div id="adminDetail"></div>`;
+  document.getElementById("logoutBtn").addEventListener("click", ()=>{ clearSession(); location.hash=""; state.view="landing"; render(); });
+  document.getElementById("changePassBtn").addEventListener("click", changeAdminPassword);
+  document.getElementById("newSurveyBtn").addEventListener("click", createNewSurvey);
+  document.getElementById("dupSurveyBtn").addEventListener("click", duplicateSurvey);
+  document.getElementById("delSurveyBtn").addEventListener("click", deleteSurvey);
+  await refreshAdminIndex();
+}
+
+async function fetchSurveys(){
+  const { data, error } = await sb.rpc("branch_get_surveys", { p_branch_id: state.session.branchId, p_password: state.session.password });
+  if(error){ clearSession(); state.view="admin-login"; render(); return []; }
+  return data || [];
+}
+
+async function refreshAdminIndex(keepSel){
+  state.adminSurveys = await fetchSurveys();
+  const sel = document.getElementById("surveySelect");
+  if(!sel) return;
+  if(state.adminSurveys.length===0){
+    sel.innerHTML = `<option value="">설문이 없습니다. '새 설문'을 눌러 시작하세요.</option>`;
+    document.getElementById("adminDetail").innerHTML = "";
+    state.adminCfg = null;
+    return;
+  }
+  sel.innerHTML = state.adminSurveys.map(s=>`<option value="${s.id}">${escapeHtml(s.title)}</option>`).join("");
+  const target = keepSel && state.adminSurveys.find(s=>s.id===keepSel) ? keepSel : state.adminSurveys[0].id;
+  sel.value = target;
+  sel.onchange = ()=> loadAdminSurvey(sel.value);
+  await loadAdminSurvey(target);
+}
+
+async function createNewSurvey(){
+  const title = await showPrompt("새 설문 만들기", "설문 제목을 입력해 주세요.", "신규 설문");
+  if(!title) return;
+  const { data, error } = await sb.rpc("branch_create_survey", {
+    p_branch_id: state.session.branchId, p_password: state.session.password,
+    p_title: title, p_questions: DEFAULT_QUESTIONS()
+  });
+  if(error){ await showAlert("오류","설문 생성에 실패했습니다."); return; }
+  await refreshAdminIndex(data);
+}
+
+async function duplicateSurvey(){
+  if(!state.adminCfg) return;
+  const title = await showPrompt("설문 복제", "복제될 설문의 제목을 입력해 주세요.", state.adminCfg.title + " (복제)");
+  if(!title) return;
+  const { data, error } = await sb.rpc("branch_create_survey", {
+    p_branch_id: state.session.branchId, p_password: state.session.password,
+    p_title: title, p_questions: state.adminCfg.questions
+  });
+  if(error){ await showAlert("오류","설문 복제에 실패했습니다."); return; }
+  await sb.rpc("branch_save_identity", {
+    p_branch_id: state.session.branchId, p_password: state.session.password,
+    p_survey_id: data, p_identity_mode: state.adminCfg.identity_mode, p_prizes: state.adminCfg.prizes||[]
+  });
+  await refreshAdminIndex(data);
+}
+
+async function deleteSurvey(){
+  if(!state.adminCfg){ await showAlert("안내","삭제할 설문을 먼저 선택해 주세요."); return; }
+  const ok = await showConfirm("설문 삭제", `"${state.adminCfg.title}" 설문과 응답을 완전히 삭제합니다. 되돌릴 수 없습니다. 계속할까요?`, true);
+  if(!ok) return;
+  const { error } = await sb.rpc("branch_delete_survey", { p_branch_id: state.session.branchId, p_password: state.session.password, p_survey_id: state.adminCfg.id });
+  if(error){ await showAlert("오류","삭제 중 문제가 발생했습니다."); return; }
+  state.adminCfg = null;
+  if(state.pollTimer){ clearInterval(state.pollTimer); state.pollTimer=null; }
+  await refreshAdminIndex();
+}
+
+async function changeAdminPassword(){
+  const cur = document.getElementById("curPassInput").value;
+  const n1 = document.getElementById("newPassInput").value;
+  const n2 = document.getElementById("newPassInput2").value;
+  if(!n1 || n1.length<4){ await showAlert("변경 실패","새 비밀번호는 4자 이상 입력해 주세요."); return; }
+  if(n1!==n2){ await showAlert("변경 실패","새 비밀번호가 서로 다릅니다."); return; }
+  const { error } = await sb.rpc("branch_change_password", { p_branch_id: state.session.branchId, p_old_password: cur, p_new_password: n1 });
+  if(error){ await showAlert("변경 실패","현재 비밀번호가 일치하지 않습니다."); return; }
+  state.session.password = n1; saveSession();
+  await showAlert("변경 완료","비밀번호가 변경되었습니다.");
+}
+
+async function loadAdminSurvey(id){
+  state.adminCfg = state.adminSurveys.find(s=>s.id===id) || null;
+  renderAdminDetail();
+  await refreshStats();
+  if(state.pollTimer) clearInterval(state.pollTimer);
+  state.pollTimer = setInterval(refreshStats, 6000);
+}
+
+function renderAdminDetail(){
+  const cfg = state.adminCfg;
+  const det = document.getElementById("adminDetail");
+  if(!cfg){ det.innerHTML=""; return; }
+  const closed = isClosed(cfg);
+  const named = cfg.identity_mode === "named";
+  const link = location.origin + location.pathname + "?s=" + cfg.id;
+
+  det.innerHTML = `
+    <details class="section" open><summary>설문 제목 &amp; 기간
+      <span class="status-badge ${closed?'status-closed':'status-active'}">${closed?'종료':'진행중'}</span></summary>
+      <div class="section-body">
+        <label class="small">설문 제목</label>
+        <input type="text" id="titleInput" value="${escapeHtml(cfg.title)}">
+        <label class="small">로고 이미지 (선택)</label>
+        <div class="logo-drop" id="logoDrop">이미지를 선택하려면 클릭 (권장 200KB 이하)</div>
+        <input type="file" id="logoFile" accept="image/*" style="display:none">
+        ${cfg.logo? `<img src="${cfg.logo}" class="logo-preview"><br><button class="btn-ghost btn-sm" id="logoRemove" style="margin-top:6px">로고 제거</button>` : ""}
+        <label class="small">종료 일자 (선택, 지나면 자동 종료)</label>
+        <input type="date" id="endDateInput" value="${cfg.end_date||''}">
+        <div class="row" style="margin-top:14px">
+          <button class="btn btn-sm" id="saveMetaBtn" style="flex:1">저장</button>
+          <button class="btn-ghost btn-sm ${closed?'':'btn-danger'}" id="toggleCloseBtn" style="flex:1">${closed?'즉시 재개':'즉시 종료'}</button>
+        </div>
+      </div>
+    </details>
+
+    <details class="section"><summary>응답자 유형 &amp; 사은품</summary>
+      <div class="section-body">
+        <div class="row" style="gap:16px">
+          <label style="display:flex;align-items:center;gap:6px;flex:none;font-size:14px"><input type="radio" name="identityMode" id="modeAnon" value="anonymous" ${!named?'checked':''} style="width:auto"> 익명 설문</label>
+          <label style="display:flex;align-items:center;gap:6px;flex:none;font-size:14px"><input type="radio" name="identityMode" id="modeNamed" value="named" ${named?'checked':''} style="width:auto"> 실명 설문 (사은품 추첨)</label>
+        </div>
+        <div id="prizeBlock" style="margin-top:14px; ${named?'':'display:none'}">
+          <label class="small">사은품 목록</label>
+          <div id="prizeList"></div>
+          <button class="btn-ghost btn-sm" id="addPrizeBtn" type="button">+ 상품 추가</button>
+        </div>
+        <button class="btn btn-sm" id="saveIdentityBtn" style="margin-top:14px">저장</button>
+        <p class="q-hint" style="margin-top:8px">실명 설문으로 저장하면, 고객 화면에 성함·연락처 입력란이 자동으로 추가됩니다.</p>
+      </div>
+    </details>
+
+    ${named ? `<details class="section"><summary>추첨</summary>
+      <div class="section-body">
+        <p class="q-hint">성함·연락처를 남긴 응답자 중에서 등록된 상품 수량만큼 무작위로 당첨자를 뽑습니다. 한 사람이 여러 상품에 중복 당첨되지 않습니다.</p>
+        <button class="btn btn-sm" id="runLotteryBtn">${cfg.winners?'다시 추첨':'추첨 실행'}</button>
+        ${cfg.winners? `<button class="btn-ghost btn-sm" id="exportWinnersBtn" style="margin-left:8px">당첨자 CSV</button>` : ""}
+        <div id="winnersBody" style="margin-top:14px">${cfg.winners? renderWinnersHTML(cfg.winners) : '<div class="q-hint">아직 추첨하지 않았습니다.</div>'}</div>
+      </div>
+    </details>` : ""}
+
+    <details class="section"><summary>문항 편집</summary>
+      <div class="section-body">
+        <div id="qeditList"></div>
+        <button class="btn-ghost btn-sm" id="addQBtn">+ 문항 추가</button>
+        <button class="btn btn-sm" id="saveQBtn" style="margin-left:8px">문항 저장</button>
+        <p class="q-hint" style="margin-top:10px">이미 응답이 쌓인 설문에서는 선택지를 지우거나 유형을 바꾸면 기존 집계와 어긋날 수 있어요. 문구 수정은 안전하지만, 큰 변경은 '복제'로 새 설문을 만드는 걸 권장합니다.</p>
+      </div>
+    </details>
+
+    <details class="section" open><summary>링크 &amp; QR 코드</summary>
+      <div class="section-body">
+        <label class="small">고객용 링크 (이 설문 전용)</label>
+        <div class="link-box"><input type="text" id="linkBox" value="${link}" readonly><button class="btn-ghost btn-sm" id="copyBtn">복사</button></div>
+        <label class="small">QR 코드</label>
+        <div class="qr-wrap"><canvas id="qrCanvas"></canvas>
+          <div><button class="btn-ghost btn-sm" id="downloadQrBtn">PNG로 다운로드</button></div></div>
+      </div>
+    </details>
+
+    <details class="section" open><summary>실시간 집계</summary>
+      <div class="section-body">
+        <div class="row" style="margin-bottom:10px">
+          <button class="btn-ghost btn-sm" id="exportBtn">CSV 내보내기</button>
+          <button class="btn-ghost btn-sm btn-danger" id="resetBtn">이 설문 응답 초기화</button>
+        </div>
+        <div id="statsBody">불러오는 중...</div>
+      </div>
+    </details>
+  `;
+
+  document.getElementById("saveMetaBtn").addEventListener("click", saveMeta);
+  document.getElementById("toggleCloseBtn").addEventListener("click", toggleClose);
+  document.getElementById("logoDrop").addEventListener("click", ()=>document.getElementById("logoFile").click());
+  document.getElementById("logoFile").addEventListener("change", onLogoFile);
+  const logoRemove = document.getElementById("logoRemove");
+  if(logoRemove) logoRemove.addEventListener("click", async ()=>{ state.adminCfg.logo=null; await saveMeta(true); });
+
+  document.querySelectorAll('input[name="identityMode"]').forEach(r=>{
+    r.addEventListener("change",(e)=>{ document.getElementById("prizeBlock").style.display = e.target.value==="named"?"":"none"; });
+  });
+  document.getElementById("addPrizeBtn").addEventListener("click", ()=>{
+    if(!state.adminCfg.prizes) state.adminCfg.prizes=[];
+    state.adminCfg.prizes.push({id:qid(), name:"", qty:1}); renderPrizeList();
+  });
+  renderPrizeList();
+  document.getElementById("saveIdentityBtn").addEventListener("click", async ()=>{
+    const mode = document.querySelector('input[name="identityMode"]:checked').value;
+    const { error } = await sb.rpc("branch_save_identity", {
+      p_branch_id: state.session.branchId, p_password: state.session.password,
+      p_survey_id: cfg.id, p_identity_mode: mode, p_prizes: state.adminCfg.prizes||[]
+    });
+    if(error){ await showAlert("오류","저장에 실패했습니다."); return; }
+    await refreshAdminIndex(cfg.id);
+  });
+  const runLotteryBtn = document.getElementById("runLotteryBtn");
+  if(runLotteryBtn) runLotteryBtn.addEventListener("click", runLottery);
+  const exportWinnersBtn = document.getElementById("exportWinnersBtn");
+  if(exportWinnersBtn) exportWinnersBtn.addEventListener("click", exportWinnersCsv);
+
+  document.getElementById("addQBtn").addEventListener("click", ()=>{
+    state.adminCfg.questions.push({ id: qid(), type:"single", label:"", sub:"", required:false, options:["옵션1","옵션2"] });
+    renderQEditList();
+  });
+  document.getElementById("saveQBtn").addEventListener("click", saveQuestions);
+  renderQEditList();
+
+  document.getElementById("copyBtn").addEventListener("click", ()=>{
+    navigator.clipboard.writeText(link).then(()=>{
+      const b=document.getElementById("copyBtn"); b.textContent="복사됨"; setTimeout(()=>b.textContent="복사",1200);
+    });
+  });
+  document.getElementById("exportBtn").addEventListener("click", exportCsv);
+  document.getElementById("resetBtn").addEventListener("click", resetResponses);
+  try{ new QRious({ element: document.getElementById("qrCanvas"), value: link, size:200, background:"#ffffff", foreground:"#1A1D23" }); }catch(e){}
+  document.getElementById("downloadQrBtn").addEventListener("click", ()=>{
+    const canvas=document.getElementById("qrCanvas");
+    const a=document.createElement("a"); a.href=canvas.toDataURL("image/png"); a.download=`${cfg.title}_QR.png`; a.click();
+  });
+}
+
+function renderPrizeList(){
+  const wrap=document.getElementById("prizeList"); if(!wrap) return;
+  const prizes = state.adminCfg.prizes || [];
+  wrap.innerHTML = prizes.map((p,i)=>`
+    <div class="row prize-row" data-idx="${i}">
+      <input type="text" class="prize-name" placeholder="상품명 (예: 스타벅스 기프티콘)" value="${escapeHtml(p.name||'')}" style="flex:2">
+      <input type="number" class="prize-qty" min="1" value="${p.qty||1}" style="flex:0 0 70px">
+      <button class="qedit-remove" type="button" title="삭제">✕</button>
+    </div>`).join("") || `<p class="q-hint">등록된 상품이 없습니다. '+ 상품 추가'를 눌러주세요.</p>`;
+  wrap.querySelectorAll(".prize-row").forEach(row=>{
+    const idx = Number(row.dataset.idx);
+    row.querySelector(".prize-name").addEventListener("input", e=>{ state.adminCfg.prizes[idx].name=e.target.value; });
+    row.querySelector(".prize-qty").addEventListener("input", e=>{ state.adminCfg.prizes[idx].qty=Math.max(1, parseInt(e.target.value)||1); });
+    row.querySelector(".qedit-remove").addEventListener("click", ()=>{ state.adminCfg.prizes.splice(idx,1); renderPrizeList(); });
+  });
+}
+
+function shuffleArr(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+function renderWinnersHTML(winners){
+  const header = `<div class="q-hint">추첨 일시: ${new Date(winners.drawnAt).toLocaleString("ko-KR")} · 총 ${winners.results.length}명 당첨</div>`;
+  const rows = winners.results.map(r=>`<div class="text-answer"><b>${escapeHtml(r.prizeName)}</b> — ${escapeHtml(r.name)} (${escapeHtml(r.phone)})</div>`).join("");
+  return header + (rows || `<div class="text-answer" style="color:var(--muted-2)">당첨자가 없습니다.</div>`);
+}
+async function runLottery(){
+  const cfg = state.adminCfg;
+  const prizes = (cfg.prizes||[]).filter(p=>p.name && p.name.trim() && p.qty>0);
+  if(!prizes.length){ await showAlert("상품을 먼저 등록해 주세요","위 '응답자 유형 & 사은품'에서 상품명과 수량을 입력하고 저장한 뒤 다시 시도해 주세요."); return; }
+  const { data, error } = await sb.rpc("branch_get_responses", { p_branch_id: state.session.branchId, p_password: state.session.password, p_survey_id: cfg.id });
+  if(error){ await showAlert("오류","응답을 불러오지 못했습니다."); return; }
+  const eligible = (data||[]).filter(r=>r.contact_name && r.contact_phone);
+  if(!eligible.length){ await showAlert("추첨 불가","아직 성함·연락처를 남긴 응답이 없습니다."); return; }
+  if(cfg.winners){
+    const ok = await showConfirm("다시 추첨","이미 추첨된 결과가 있습니다. 다시 추첨하면 기존 결과는 사라집니다. 계속할까요?", true);
+    if(!ok) return;
+  }
+  const pool = shuffleArr([...eligible]);
+  const results = [];
+  for(const prize of prizes){
+    for(let i=0;i<prize.qty && pool.length>0;i++){
+      const w = pool.shift();
+      results.push({ prizeName: prize.name, name: w.contact_name, phone: w.contact_phone, responseId: w.id });
+    }
+  }
+  const winners = { drawnAt: new Date().toISOString(), results };
+  const { error: e2 } = await sb.rpc("branch_save_winners", { p_branch_id: state.session.branchId, p_password: state.session.password, p_survey_id: cfg.id, p_winners: winners });
+  if(e2){ await showAlert("오류","저장에 실패했습니다."); return; }
+  await refreshAdminIndex(cfg.id);
+}
+function exportWinnersCsv(){
+  const cfg = state.adminCfg; if(!cfg.winners) return;
+  const header=["상품명","성함","연락처"];
+  const rows = cfg.winners.results.map(r=>[r.prizeName,r.name,r.phone].map(v=>`"${String(v).replace(/"/g,'""')}"`));
+  const csv=[header.join(","), ...rows.map(r=>r.join(","))].join("\n");
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob); const a=document.createElement("a");
+  a.href=url; a.download=`${cfg.title}_당첨자_${todayStr()}.csv`; a.click(); URL.revokeObjectURL(url);
+}
+
+function renderQEditList(){
+  const wrap=document.getElementById("qeditList"); if(!wrap) return;
+  wrap.innerHTML = state.adminCfg.questions.map((q,i)=>`
+    <div class="qedit-card" data-idx="${i}">
+      <div class="qedit-top">
+        <input type="text" class="q-label-input" placeholder="문항 내용" value="${escapeHtml(q.label)}" style="flex:2">
+        <select class="q-type-select">
+          <option value="single" ${q.type==='single'?'selected':''}>객관식(단일)</option>
+          <option value="multi" ${q.type==='multi'?'selected':''}>객관식(복수)</option>
+          <option value="text" ${q.type==='text'?'selected':''}>주관식</option>
+        </select>
+        <button class="qedit-remove" title="문항 삭제">✕</button>
+      </div>
+      <input type="text" class="q-sub-input" placeholder="보조 설명 (선택 사항)" value="${escapeHtml(q.sub||'')}" style="margin-bottom:8px">
+      <label class="small"><input type="checkbox" class="q-required-check" ${q.required?'checked':''} style="width:auto"> 필수 응답</label>
+      ${q.type!=='text' ? `<label class="small">선택지 (한 줄에 하나씩)</label>
+        <textarea class="q-options-area" style="min-height:70px">${escapeHtml((q.options||[]).join("\n"))}</textarea>` : ""}
+      <div class="qedit-preview-wrap"><div class="qedit-preview-label">고객 화면 미리보기</div>
+        <div class="card preview-card qedit-preview-body">${questionCardHTML(q)}</div></div>
+    </div>`).join("");
+  wrap.querySelectorAll(".qedit-card").forEach(card=>{
+    const idx=Number(card.dataset.idx);
+    const refresh=()=>refreshPreview(idx);
+    card.querySelector(".q-label-input").addEventListener("input", refresh);
+    const subInput=card.querySelector(".q-sub-input"); if(subInput) subInput.addEventListener("input", refresh);
+    card.querySelector(".q-required-check").addEventListener("change", refresh);
+    const optArea=card.querySelector(".q-options-area"); if(optArea) optArea.addEventListener("input", refresh);
+    card.querySelector(".qedit-remove").addEventListener("click", ()=>{ syncFormToState(); state.adminCfg.questions.splice(idx,1); renderQEditList(); });
+    card.querySelector(".q-type-select").addEventListener("change",(e)=>{
+      syncFormToState();
+      const question=state.adminCfg.questions[idx]; const newType=e.target.value;
+      question.type=newType;
+      if(newType!=="text" && (!question.options||question.options.length===0)) question.options=["옵션1","옵션2"];
+      renderQEditList();
+    });
+  });
+}
+function refreshPreview(idx){
+  const card=document.querySelectorAll("#qeditList .qedit-card")[idx]; if(!card) return;
+  const label=card.querySelector(".q-label-input").value;
+  const subEl=card.querySelector(".q-sub-input"); const sub=subEl?subEl.value:"";
+  const type=card.querySelector(".q-type-select").value;
+  const required=card.querySelector(".q-required-check").checked;
+  let options=[];
+  if(type!=="text"){ const area=card.querySelector(".q-options-area"); options=area?area.value.split("\n").map(s=>s.trim()).filter(Boolean):[]; }
+  const previewEl=card.querySelector(".qedit-preview-body");
+  if(previewEl) previewEl.innerHTML = questionCardHTML({label,sub,type,required,options});
+}
+function syncFormToState(){
+  const cards=document.querySelectorAll("#qeditList .qedit-card");
+  cards.forEach((card,i)=>{
+    const q=state.adminCfg.questions[i]; if(!q) return;
+    q.label=card.querySelector(".q-label-input").value;
+    const subEl=card.querySelector(".q-sub-input"); if(subEl) q.sub=subEl.value;
+    q.required=card.querySelector(".q-required-check").checked;
+    if(q.type!=="text"){ const area=card.querySelector(".q-options-area"); if(area) q.options=area.value.split("\n").map(s=>s.trim()).filter(Boolean); }
+  });
+}
+function collectQuestionsFromForm(){
+  const cards=document.querySelectorAll("#qeditList .qedit-card"); const qs=[];
+  cards.forEach((card,i)=>{
+    const existing=state.adminCfg.questions[i];
+    const label=card.querySelector(".q-label-input").value.trim();
+    const subEl=card.querySelector(".q-sub-input"); const sub=subEl?subEl.value.trim():"";
+    const type=card.querySelector(".q-type-select").value;
+    const required=card.querySelector(".q-required-check").checked;
+    const q={ id: existing.id, type, label, sub, required };
+    if(type!=="text"){ const area=card.querySelector(".q-options-area"); q.options=area.value.split("\n").map(s=>s.trim()).filter(Boolean); }
+    qs.push(q);
+  });
+  return qs;
+}
+
+async function saveMeta(skipReadForm){
+  if(!skipReadForm){
+    state.adminCfg.title = document.getElementById("titleInput").value.trim() || state.adminCfg.title;
+    state.adminCfg.end_date = document.getElementById("endDateInput").value || null;
+  }
+  const { error } = await sb.rpc("branch_save_meta", {
+    p_branch_id: state.session.branchId, p_password: state.session.password, p_survey_id: state.adminCfg.id,
+    p_title: state.adminCfg.title, p_end_date: state.adminCfg.end_date, p_logo: state.adminCfg.logo
+  });
+  if(error){ await showAlert("오류","저장에 실패했습니다."); return; }
+  await refreshAdminIndex(state.adminCfg.id);
+}
+async function toggleClose(){
+  state.adminCfg.status = isClosed(state.adminCfg) ? "active" : "closed";
+  const { error } = await sb.rpc("branch_set_status", { p_branch_id: state.session.branchId, p_password: state.session.password, p_survey_id: state.adminCfg.id, p_status: state.adminCfg.status });
+  if(error){ await showAlert("오류","변경에 실패했습니다."); return; }
+  await refreshAdminIndex(state.adminCfg.id);
+}
+function onLogoFile(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async ()=>{
+    state.adminCfg.logo=reader.result;
+    if(file.size>200*1024) await showAlert("이미지 용량 안내","권장 용량(200KB)보다 큽니다.");
+    await saveMeta(true);
+  };
+  reader.readAsDataURL(file);
+}
+async function saveQuestions(){
+  state.adminCfg.questions = collectQuestionsFromForm();
+  const { error } = await sb.rpc("branch_save_questions", { p_branch_id: state.session.branchId, p_password: state.session.password, p_survey_id: state.adminCfg.id, p_questions: state.adminCfg.questions });
+  if(error){ await showAlert("오류","저장에 실패했습니다."); return; }
+  await showAlert("저장 완료","문항이 저장되었습니다.");
+}
+
+async function refreshStats(){
+  const body=document.getElementById("statsBody"); if(!body || !state.adminCfg) return;
+  const { data, error } = await sb.rpc("branch_get_responses", { p_branch_id: state.session.branchId, p_password: state.session.password, p_survey_id: state.adminCfg.id });
+  if(error){ body.innerHTML=`<div class="error-text" style="display:block">데이터를 불러오지 못했습니다.</div>`; return; }
+  const responseData = data || [];
+  state._lastData = responseData.map(r=>({ id:r.id, ts:r.created_at, answers:r.answers, contact:{name:r.contact_name, phone:r.contact_phone} }));
+
+  const total = responseData.length;
+  const today = responseData.filter(r=> new Date(r.created_at).toDateString() === new Date().toDateString()).length;
+  const cfg = state.adminCfg;
+  const choiceQs = (cfg.questions||[]).filter(q=>q.type!=="text");
+  const textQs = (cfg.questions||[]).filter(q=>q.type==="text");
+
+  let html = `<div class="stat-row">
+      <div class="stat"><div class="num">${total}</div><div class="lbl">전체 응답 수</div></div>
+      <div class="stat"><div class="num">${today}</div><div class="lbl">오늘 응답 수</div></div>
+      <div class="stat"><div class="num">${(cfg.questions||[]).length}</div><div class="lbl">문항 수</div></div>
+    </div>`;
+
+  choiceQs.forEach(q=>{
+    const counts={}; (q.options||[]).forEach(o=>counts[o]=0);
+    let answeredN=0;
+    responseData.forEach(r=>{
+      const a=(r.answers||{})[q.id]; if(!hasAnswer(a)) return; answeredN++;
+      if(Array.isArray(a)) a.forEach(v=>{ if(counts[v]!==undefined) counts[v]++; });
+      else if(counts[a]!==undefined) counts[a]++;
+    });
+    const max=Math.max(1, ...Object.values(counts));
+    html += `<div class="card"><div class="q-label">${escapeHtml(q.label)}</div><div class="q-hint">${answeredN}건 응답</div>`;
+    (q.options||[]).forEach(o=>{
+      const c=counts[o]; const pct=answeredN?Math.round(c/answeredN*100):0;
+      html += `<div class="bar-row"><div class="bar-top"><span>${escapeHtml(o)}</span><span>${c}건 (${pct}%)</span></div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(c/max*100)}%"></div></div></div>`;
+    });
+    html += `</div>`;
+  });
+  textQs.forEach(q=>{
+    const answers = responseData.filter(r=> hasAnswer((r.answers||{})[q.id]));
+    html += `<div class="card"><div class="q-label">${escapeHtml(q.label)}</div><div class="q-hint">${answers.length}건</div>`;
+    if(answers.length===0) html += `<div class="text-answer" style="color:var(--muted-2)">아직 응답이 없습니다.</div>`;
+    answers.slice(0,50).forEach(r=>{
+      html += `<div class="text-answer">${escapeHtml(r.answers[q.id])}<div class="ts">${new Date(r.created_at).toLocaleString("ko-KR")}</div></div>`;
+    });
+    html += `</div>`;
+  });
+  body.innerHTML = html;
+}
+
+function exportCsv(){
+  const data = state._lastData || []; const qs = state.adminCfg.questions;
+  const named = state.adminCfg.identity_mode === "named";
+  const header = ["응답ID","제출시각", ...(named?["성함","연락처"]:[]), ...qs.map(q=>q.label)];
+  const rows = data.map(r=> [r.id, r.ts, ...(named?[r.contact?.name||"", r.contact?.phone||""]:[]), ...qs.map(q=>{
+      const a=r.answers[q.id]; const v=Array.isArray(a)?a.join("; "):(a||"");
+      return `"${String(v).replace(/"/g,'""')}"`;
+    })]);
+  const csv=[header.join(","), ...rows.map(r=>r.join(","))].join("\n");
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob); const a=document.createElement("a");
+  a.href=url; a.download=`${state.adminCfg.title}_응답_${todayStr()}.csv`; a.click(); URL.revokeObjectURL(url);
+}
+async function resetResponses(){
+  const ok = await showConfirm("응답 초기화","이 설문의 모든 응답 데이터를 삭제합니다. 되돌릴 수 없습니다. 계속할까요?", true);
+  if(!ok) return;
+  const { error } = await sb.rpc("branch_reset_responses", { p_branch_id: state.session.branchId, p_password: state.session.password, p_survey_id: state.adminCfg.id });
+  if(error){ await showAlert("오류","삭제 중 문제가 발생했습니다."); return; }
+  await refreshStats();
+}
+
+init();
+</script>
+</body>
+</html>
