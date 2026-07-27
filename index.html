@@ -235,13 +235,21 @@ function renderLanding(){
     <button class="btn-ghost btn-sm" id="adminEnterBtn">관리자이신가요?</button></div>`;
   document.getElementById("adminEnterBtn").addEventListener("click", goAdmin);
 }
+function goHome(){
+  history.pushState(null, "", location.pathname);
+  location.hash = ""; state.view = "landing"; render();
+}
 function renderNotFound(){
   app.innerHTML = `<div class="thanks"><div class="big" style="color:var(--muted-2)">✦</div><h1>설문을 찾을 수 없습니다</h1>
-    <p class="sub">링크가 잘못되었거나 삭제된 설문일 수 있어요.</p></div>`;
+    <p class="sub">링크가 잘못되었거나 삭제된 설문일 수 있어요.</p>
+    <button class="admin-tiny-link" id="homeBtn">처음 화면으로</button></div>`;
+  document.getElementById("homeBtn").addEventListener("click", goHome);
 }
 function renderClosedPublic(){
   app.innerHTML = `<div class="closed"><div class="big">✦</div><h1>설문이 종료되었습니다</h1>
-    <p class="sub">참여해 주셔서 감사합니다. 다음 방문 때 또 만나요.</p></div>`;
+    <p class="sub">참여해 주셔서 감사합니다. 다음 방문 때 또 만나요.</p>
+    <button class="admin-tiny-link" id="homeBtn">처음 화면으로</button></div>`;
+  document.getElementById("homeBtn").addEventListener("click", goHome);
 }
 
 /* ===================== 고객 설문 화면 ===================== */
